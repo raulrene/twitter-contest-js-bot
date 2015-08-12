@@ -21,3 +21,6 @@ This bot is written purely for educational purposes. I hold no liability for wha
 
 ## Dependencies
 It makes use of the <a href="https://github.com/request/request"><b>Request</b></a> library, a HTTP JS client.
+
+## Licence
+The code is open-source and available under the MIT Licence. More details in the LICENCE.md file.
