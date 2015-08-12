@@ -15,7 +15,8 @@ module.exports = {
 		params = 
 			"q=" + encodeURIComponent(options.text),
 			"&count=" + options.count ? options.count : 10,
-			"&result_type=" + options.result_type ? options.result_type : 'popular';
+			"&result_type=" + options.result_type ? options.result_type : 'popular',
+			"&since_id=" + options.since_id;
 
 		request.get({url: 'https://api.twitter.com/1.1/search/tweets.json?' + params, oauth: oauth}, options.callback ? options.callback : defaultCallback);
 	},
