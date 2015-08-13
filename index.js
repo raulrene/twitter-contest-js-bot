@@ -15,8 +15,12 @@ var API = require('./api-functions'),
 			// Iterating through tweets returned by the Search
 			obj.statuses.forEach(function (searchItem) {
 
-				// Save the search item in the Search Results array
-				searchResultsArr.push(searchItem);
+				// Further filtering out the retweets
+				if (!searchItem.retweeted_status) {
+
+					// Save the search item in the Search Results array
+					searchResultsArr.push(searchItem);
+				}
 			});
 
 			// If we have the next_results, search again for the rest (sort of a pagination)
@@ -41,7 +45,8 @@ var API = require('./api-functions'),
   	/** The Search function */
   	var search = function () {
   		API.search({
-			text: "retweet to win -vote OR RT to win -vote", 	// Without having the word "vote"
+  			// Without having the word "vote", and filtering out retweets - as much as possible
+			text: "retweet to win -vote -filter:retweets OR RT to win -vote -filter:retweets", 
 			result_type: "recent",
 			callback: callback,
 			since_id: last_tweet_id
