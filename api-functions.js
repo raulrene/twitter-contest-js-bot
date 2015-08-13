@@ -7,15 +7,18 @@ var defaultCallback = function (error, response, body) {
 	if (!error && response.statusCode === 200) {
 		var result = JSON.parse(body);
 
-		result.statuses.forEach(function (item) {
-			allItems.push(item.id);
-		});
+		// Case when the callback is used after a search
+		if (result && result.statuses) {
+			result.statuses.forEach(function (item) {
+				allItems.push(item.id);
+			});
 
-		console.log("So far we have a total of:", allItems.length);
-		
-		// If we have the next_results, search again for the rest (sort of a pagination)
-		if (result.search_metadata.next_results) {
-			API.searchByStringParam(result.search_metadata.next_results, defaultCallback);
+			console.log("So far we have a total of:", allItems.length);
+			
+			// If we have the next_results, search again for the rest (sort of a pagination)
+			if (result.search_metadata.next_results) {
+				API.searchByStringParam(result.search_metadata.next_results, defaultCallback);
+			}
 		}
   	} else {
   		console.error("Error!", body);
@@ -41,12 +44,20 @@ var API = {
 		request.get({url: 'https://api.twitter.com/1.1/search/tweets.json' + stringParams, oauth: oauth}, callback);
 	},
 
-	retweet: function (id) {
-		request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + id + '.json', oauth: oauth}, defaultCallback); 
+	retweet: function (tweetId) {
+		request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: oauth}, defaultCallback); 
 	},
 
-	favorite: function (id) {
-		request.post({url: 'https://api.twitter.com/1.1/favorites/create.json?id=' + id, oauth: oauth}, defaultCallback);
+	favorite: function (tweetId) {
+		request.post({url: 'https://api.twitter.com/1.1/favorites/create.json?id=' + tweetId, oauth: oauth}, defaultCallback);
+	},
+
+	follow: function (userId) {
+		request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?user_id=' + userId, oauth: oauth}, defaultCallback);
+	},
+
+	followByUsername: function (userName) {
+		request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?screen_name=' + userName, oauth: oauth}, defaultCallback);
 	}
 };
 
