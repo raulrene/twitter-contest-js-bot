@@ -2,8 +2,7 @@ var API = require('./api-functions');
 
 (function () {
 	API.search({
-		text: "tranceylvania",
-		count: 5,
+		text: "retweet",
 		result_type: 'recent'
 	});
 	
