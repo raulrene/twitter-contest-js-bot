@@ -1,11 +1,10 @@
 # Twitter-ContestJS-bot
 
-A Javascript bot that searches recent tweets about contests (based on retweeting) and retweets them. If necessary, it also favorites the tweet. (Follow functionality comming up soon)
+A Javascript bot that searches recent tweets about contests (based on retweeting) and retweets them. If necessary, it also favorites the tweet.
 
 Inspired by http://www.hscott.net/twitter-contest-winning-as-a-service/
 
 ##To Dos
- * Keep polling content without exiting program
  * Follow users that require following for entering the contest
 
 ##Disclaimer
