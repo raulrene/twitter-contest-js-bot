@@ -4,9 +4,6 @@ A Javascript bot that searches recent tweets about contests (based on retweeting
 
 Inspired by http://www.hscott.net/twitter-contest-winning-as-a-service/
 
-##To Dos
- * Only retweet original tweets - avoid retweeting retweets of contests
-
 ##Disclaimer
 
 This bot is written purely for educational purposes. I hold no liability for what you do with this bot or what happens to you by using this bot. Abusing this bot can get you banned from Twitter, so make sure to read up on proper usage of the Twitter API.
