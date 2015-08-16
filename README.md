@@ -16,7 +16,7 @@ This bot is written purely for educational purposes. I hold no liability for wha
  * run `node index.js`
 
 ## Dependencies
-It makes use of the <a href="https://github.com/request/request"><b>Request</b></a> library, a HTTP JS client.
+It makes use of the <a href="https://github.com/request/request-promise"><b>reqyest-promise</b></a> library, a HTTP JS client.
 
 ## Alternatives
 If you're looking for similar projects in alternative languages, check these out:
