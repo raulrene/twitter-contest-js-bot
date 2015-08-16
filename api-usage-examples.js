@@ -11,4 +11,6 @@ var API = require('./api-functions');
 	API.favorite("454674764486172673");
 
 	API.followByUsername("RaulLepsa");
+
+	API.getBlockedUsers();
 })();
