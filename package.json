@@ -3,6 +3,6 @@
   "description": "A Javascript bot that searches recent tweets about contests (based on retweeting) and retweets them. ",
   "author": "Raul Rene Lepsa <raul.lepsa@gmail.com>",
   "dependencies": {
-    "request": "^2.60.0"
+    "request-promise": "^0.4.3"
   }
 }

@@ -1,42 +1,34 @@
-var request = require('request');
+var request = require('request-promise');
 var oauth = require("./config");
 var allItems = [];
 var blockedList = [];
 
 //Callback functions
 var callbacks = {
-	default: function (error, response, body) {
-		if (!error && response.statusCode === 200) {
-			var result = JSON.parse(body);
+	default: function (response) {
+		var result = JSON.parse(response);
 
-			// Case when the callback is used after a search
-			if (result && result.statuses) {
-				result.statuses.forEach(function (item) {
-					allItems.push(item.id);
-				});
+		// Case when the callback is used after a search
+		if (result && result.statuses) {
+			result.statuses.forEach(function (item) {
+				allItems.push(item.id);
+			});
 
-				console.log("So far we have a total of:", allItems.length);
-				
-				// If we have the next_results, search again for the rest (sort of a pagination)
-				if (result.search_metadata.next_results) {
-					API.searchByStringParam(result.search_metadata.next_results, callbacks.default);
-				}
+			console.log("So far we have a total of:", allItems.length);
+			
+			// If we have the next_results, search again for the rest (sort of a pagination)
+			if (result.search_metadata.next_results) {
+				API.searchByStringParam(result.search_metadata.next_results, callbacks.default);
 			}
-	  	} else {
-	  		console.error("Error!", body);
-	  	}
+		}
 	},
 
-	blockList: function (error, response, body) {
-		if (!error && response.statusCode === 200) {
-			var result = JSON.parse(body);
-			result.users.forEach(function (user) {
-				blockedList.push(user.id);
-			});
-			console.log("Your list of blocked users:", blockedList);
-		} else {
-			console.log("Error retrieving block list", body);
-		}
+	blockList: function (response) {
+		var result = JSON.parse(response);
+		result.users.forEach(function (user) {
+			blockedList.push(user.id);
+		});
+		console.log("Your list of blocked users:", blockedList);
 	}
 };
 
@@ -52,31 +44,59 @@ var API = {
 			params += "&max_id=" + options.max_id;
 		}
 
-		API.searchByStringParam(params, options.callback ? options.callback : callbacks.default);
+		API.searchByStringParam(params, options.callback ? options.callback : callbacks.default, options.error_callback);
 	},
 
-	searchByStringParam: function (stringParams, callback) {
-		request.get({url: 'https://api.twitter.com/1.1/search/tweets.json' + stringParams, oauth: oauth}, callback);
+	searchByStringParam: function (stringParams, callback, errorHandler) {
+		request.get({url: 'https://api.twitter.com/1.1/search/tweets.json' + stringParams, oauth: oauth})
+			.then(callback)
+			.catch(function (err) {
+				if (errorHandler) {
+					errorHandler(err);
+				} else {
+					console.error("An error occurred:", err.message);
+				}
+			});
 	},
 
 	retweet: function (tweetId) {
-		request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: oauth}, callbacks.default); 
+		request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: oauth})
+			.then(callbacks.default)
+			.catch(function(err) {
+				console.error(err.message);
+			}); 
 	},
 
 	favorite: function (tweetId) {
-		request.post({url: 'https://api.twitter.com/1.1/favorites/create.json?id=' + tweetId, oauth: oauth}, callbacks.default);
+		request.post({url: 'https://api.twitter.com/1.1/favorites/create.json?id=' + tweetId, oauth: oauth})
+			.then(callbacks.default)
+			.catch(function(err) {
+				console.error(err.message);
+			}); 
 	},
 
 	follow: function (userId) {
-		request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?user_id=' + userId, oauth: oauth}, callbacks.default);
+		request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?user_id=' + userId, oauth: oauth})
+			.then(callbacks.default)
+			.catch(function(err) {
+				console.error(err.message);
+			}); 
 	},
 
 	followByUsername: function (userName) {
-		request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?screen_name=' + userName, oauth: oauth}, callbacks.default);
+		request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?screen_name=' + userName, oauth: oauth})
+			.then(callbacks.default)
+			.catch(function(err) {
+				console.error(err.message);
+			}); 
 	},
 
 	getBlockedUsers: function () {
-		request.get({url: 'https://api.twitter.com/1.1/blocks/list.json', oauth: oauth}, callbacks.blockList);
+		request.get({url: 'https://api.twitter.com/1.1/blocks/list.json', oauth: oauth})
+			.then(callbacks.blockList)
+			.catch(function(err) {
+				console.error("Error retrieving blocked users:", err.message);
+			});
 	}
 };
 

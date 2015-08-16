@@ -8,40 +8,37 @@ var API = require('./api-functions'),
 		searchResultsArr = [];
 
 	/** The Callback function for the Search API */
-	var callback = function (err, response, body) {
-		var payload = JSON.parse(body);
+	var callback = function (response) {
+		var payload = JSON.parse(response);
+		
+		// Iterating through tweets returned by the Search
+		payload.statuses.forEach(function (searchItem) {
 
-		if (!err && response.statusCode === 200) {
-			var payload = JSON.parse(body);
-			
-			// Iterating through tweets returned by the Search
-			payload.statuses.forEach(function (searchItem) {
+			// Further filtering out the retweets
+			if (!searchItem.retweeted_status) {
 
-				// Further filtering out the retweets
-				if (!searchItem.retweeted_status) {
-
-					// Save the search item in the Search Results array
-					searchResultsArr.push(searchItem);
-				}
-			});
-
-			// If we have the next_results, search again for the rest (sort of a pagination)
-			if (payload.search_metadata.next_results) {
-				API.searchByStringParam(payload.search_metadata.next_results, callback);
+				// Save the search item in the Search Results array
+				searchResultsArr.push(searchItem);
 			}
+		});
 
-	  	} else {
-	  		console.error("Error!", payload);
-	  		
-	  		// If the error is "Rate limit exceeded", code 88 - try again after 10 minutes
-	  		if (payload.errors[0].code === 88) {
-	  			console.log("After " + RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + " minutes, I will try again to fetch some results...");
-	  			setTimeout(function () {
-	  				search();
-	  			}, RATE_LIMIT_EXCEEDED_TIMEOUT);
-			  		
-		  	}
-	  	};
+		// If we have the next_results, search again for the rest (sort of a pagination)
+		if (payload.search_metadata.next_results) {
+			API.searchByStringParam(payload.search_metadata.next_results, callback);
+		}
+  	};
+
+  	/** The error callback for the Search API */
+  	var errorHandler = function (err) {
+  		console.error("Error!", err.message);
+
+  		// If the error is "Rate limit exceeded", code 88 - try again after 10 minutes
+  		if (JSON.parse(err.error).errors[0].code === 88) {
+  			console.log("After " + RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + " minutes, I will try again to fetch some results...");
+  			setTimeout(function () {
+  				search();
+  			}, RATE_LIMIT_EXCEEDED_TIMEOUT);
+	  	}
   	};
 
   	/** The Search function */
@@ -51,6 +48,7 @@ var API = require('./api-functions'),
 			text: "retweet to win -vote -filter:retweets OR RT to win -vote -filter:retweets", 
 			result_type: "recent",
 			callback: callback,
+			error_callback: errorHandler,
 			since_id: last_tweet_id
 		});
   	};
