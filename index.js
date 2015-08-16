@@ -89,7 +89,7 @@ var API = require('./api-functions'),
   	}
 
   	// Start the Retweet worker
-  	//retweetWorker();
+  	retweetWorker();
 
   	// Start searching (the Search is in itself a worked, as the callback continues to fetch data)
   	search();
