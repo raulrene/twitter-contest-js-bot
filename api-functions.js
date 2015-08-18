@@ -1,7 +1,6 @@
 var request = require('request-promise');
 var oauth = require("./config");
 var allItems = [];
-var blockedList = [];
 
 //Callback functions
 var callbacks = {
@@ -23,12 +22,16 @@ var callbacks = {
 		}
 	},
 
-	blockList: function (response) {
-		var result = JSON.parse(response);
+	processBlockedList: function (response) {
+		var result = JSON.parse(response),
+			blockedList = [];
+
 		result.users.forEach(function (user) {
 			blockedList.push(user.id);
 		});
 		console.log("Your list of blocked users:", blockedList);
+
+		return blockedList;
 	}
 };
 
@@ -91,9 +94,15 @@ var API = {
 			}); 
 	},
 
-	getBlockedUsers: function () {
+	getBlockedUsers: function (callback) {
 		request.get({url: 'https://api.twitter.com/1.1/blocks/list.json', oauth: oauth})
-			.then(callbacks.blockList)
+			.then(function (response) {
+				var blockedList = callbacks.processBlockedList(response);
+
+				if (callback) {
+					callback(blockedList);
+				}
+			})
 			.catch(function(err) {
 				console.error("Error retrieving blocked users:", err.message);
 			});

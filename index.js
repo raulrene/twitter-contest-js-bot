@@ -5,17 +5,18 @@ var API = require('./api-functions'),
 // Main self-initializing function
 (function() {
 	var last_tweet_id = 0,
-		searchResultsArr = [];
+		searchResultsArr = [],
+		blockedUsers = [];
 
 	/** The Callback function for the Search API */
-	var callback = function (response) {
+	var searchCallback = function (response) {
 		var payload = JSON.parse(response);
 		
 		// Iterating through tweets returned by the Search
 		payload.statuses.forEach(function (searchItem) {
 
-			// Further filtering out the retweets
-			if (!searchItem.retweeted_status) {
+			// Further filtering out the retweets and tweets from blocked users
+			if (!searchItem.retweeted_status && blockedUsers.indexOf(searchItem.user.id) === -1) {
 
 				// Save the search item in the Search Results array
 				searchResultsArr.push(searchItem);
@@ -24,7 +25,7 @@ var API = require('./api-functions'),
 
 		// If we have the next_results, search again for the rest (sort of a pagination)
 		if (payload.search_metadata.next_results) {
-			API.searchByStringParam(payload.search_metadata.next_results, callback);
+			API.searchByStringParam(payload.search_metadata.next_results, searchCallback);
 		}
   	};
 
@@ -47,7 +48,7 @@ var API = require('./api-functions'),
   			// Without having the word "vote", and filtering out retweets - as much as possible
 			text: "retweet to win -vote -filter:retweets OR RT to win -vote -filter:retweets", 
 			result_type: "recent",
-			callback: callback,
+			callback: searchCallback,
 			error_callback: errorHandler,
 			since_id: last_tweet_id
 		});
@@ -86,9 +87,16 @@ var API = require('./api-functions'),
   		}, RETWEET_TIMEOUT);
   	}
 
-  	// Start the Retweet worker
-  	retweetWorker();
 
-  	// Start searching (the Search is in itself a worked, as the callback continues to fetch data)
-  	search();
+  	// First, get the blocked users
+  	API.getBlockedUsers(function (blockedList) {
+
+  		blockedUsers = blockedList;
+
+  		// Start the Retweet worker
+  		retweetWorker();
+
+  		// Start searching (the Search is in itself a worked, as the callback continues to fetch data)
+  		search();
+  	});
 }());
