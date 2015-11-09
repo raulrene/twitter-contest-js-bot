@@ -62,11 +62,14 @@ var API = {
 			});
 	},
 
-	retweet: function (tweetId) {
+	retweet: function (tweetId, cb, errorCb) {
 		request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: oauth})
-			.then(callbacks.default)
+			.then(function() {
+				cb();
+			})
 			.catch(function(err) {
-				console.error(err.message);
+				console.error(err);
+				errCallback(tweetId);
 			}); 
 	},
 
