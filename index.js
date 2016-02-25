@@ -3,6 +3,17 @@ var API = require('./api-functions'),
     RETWEET_TIMEOUT = 1000 * 15,                      // 15 seconds
     RATE_SEARCH_TIMEOUT = 1000 * 30,                  // 30 seconds
 
+    searchQueries = [
+                     "retweet to win -vote -filter:retweets OR RT to win -vote -filter:retweets",
+                     "retweet 2 win -vote -filter:retweets OR RT 2 win -vote -filter:retweets"
+                    ],
+
+    // "Specifies what type of search results you would prefer to receive. The current default is “mixed.” Valid values include:"
+    // Default: "recent"   (return only the most recent results in the response)
+    //          "mixed"    (Include both popular and real time results in the response)
+    //          "popular"  (return only the most popular results in the response)
+    RESULT_TYPE = "mixed",
+
     // Minimum amount of retweets a tweet needs before we retweet it.
     // - Significantly reduces the amount of fake contests retweeted and stops
     //    retweeting other bots that retweet retweets of other bots.
@@ -110,14 +121,21 @@ var API = require('./api-functions'),
 
         console.log("Searching for tweets...");
 
-        API.search({
-            // Without having the word "vote", and filtering out retweets - as much as possible
-            text: "retweet to win -vote -filter:retweets OR RT to win -vote -filter:retweets",
-            result_type: "recent",
-            callback: searchCallback,
-            error_callback: errorHandler,
-            since_id: last_tweet_id
-        });
+        for (var i = 0; i < searchQueries.length; ++i)
+        {
+            API.search({
+                // Without having the word "vote", and filtering out retweets - as much as possible
+                text: searchQueries[i],
+                result_type: RESULT_TYPE,
+                callback: searchCallback,
+                error_callback: errorHandler,
+                since_id: last_tweet_id
+            });
+
+            // we need to wait between search queries so we do not trigger rate limit lockout
+            sleepFor(RATE_SEARCH_TIMEOUT);
+            console.log("Sleeping between searches so we don't trigger rate limit...");
+        }
     };
 
 
@@ -187,6 +205,12 @@ var API = require('./api-functions'),
                 retweetWorker();
             }, RATE_SEARCH_TIMEOUT);
         }
+    }
+
+    function sleepFor(sleepDuration)
+    {
+        var now = new Date().getTime();
+        while(new Date().getTime() < now + sleepDuration) { /* do nothing */ }
     }
 
 
