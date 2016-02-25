@@ -14,7 +14,7 @@ var callbacks = {
             });
 
             console.log("So far we have a total of:", allItems.length);
-            
+
             // If we have the next_results, search again for the rest (sort of a pagination)
             if (result.search_metadata.next_results) {
                 API.searchByStringParam(result.search_metadata.next_results, callbacks.default);
@@ -29,7 +29,7 @@ var callbacks = {
         result.users.forEach(function (user) {
             blockedList.push(user.id);
         });
-        console.log("Your list of blocked users:", blockedList);
+        console.log("Your list of blocked users:\n", blockedList);
 
         return blockedList;
     }
@@ -37,12 +37,12 @@ var callbacks = {
 
 var API = {
     search: function (options) {
-        params = 
+        params =
             "?q=" + encodeURIComponent(options.text),
             "&count=" + options.count ? options.count : 100,
             "&result_type=" + options.result_type ? options.result_type : 'popular',
             "&since_id=" + options.since_id ? options.since_id : 0;
-        
+
         if (options.max_id) {
             params += "&max_id=" + options.max_id;
         }
@@ -78,7 +78,7 @@ var API = {
             .then(callbacks.default)
             .catch(function (err) {
                 console.error(err.message);
-            }); 
+            });
     },
 
     follow: function (userId) {
@@ -86,7 +86,7 @@ var API = {
             .then(callbacks.default)
             .catch(function (err) {
                 console.error(err.message);
-            }); 
+            });
     },
 
     followByUsername: function (userName) {
@@ -94,7 +94,17 @@ var API = {
             .then(callbacks.default)
             .catch(function (err) {
                 console.error(err.message);
-            }); 
+            });
+    },
+
+    blockUser: function(userId)
+    {
+        request.post({url: 'https://api.twitter.com/1.1/blocks/create.json?user_id=' + userId, oauth: oauth})
+            .then(callbacks.default)
+            .catch(function(err)
+            {
+                console.error(err.message);
+            });
     },
 
     getBlockedUsers: function (callback) {

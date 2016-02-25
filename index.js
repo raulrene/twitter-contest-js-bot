@@ -1,7 +1,27 @@
 var API = require('./api-functions'),
     RATE_LIMIT_EXCEEDED_TIMEOUT = 1000 * 60 * 10,     // 10 minutes
     RETWEET_TIMEOUT = 1000 * 15,                      // 15 seconds
-    RATE_SEARCH_TIMEOUT = 1000 * 30;                  // 30 seconds
+    RATE_SEARCH_TIMEOUT = 1000 * 30,                  // 30 seconds
+
+    // Minimum amount of retweets a tweet needs before we retweet it.
+    // - Significantly reduces the amount of fake contests retweeted and stops
+    //    retweeting other bots that retweet retweets of other bots.
+    // Default: 10
+    MIN_RETWEETS_NEEDED = 10,
+
+    // Maxiumum amount of tweets a user can have before we do not retweet them.
+    // - Accounts with an extremely large amount of tweets are often bots,
+    //    therefore we should ignore them and not retweet their tweets.
+    // Default: 20000
+    //          0 (disables)
+    MAX_USER_TWEETS = 20000,
+
+    // If option above is enabled, allow us to block them.
+    // - Blocking users do not prevent their tweets from appearing in search,
+    //    but this will ensure you do not accidentally retweet them still.
+    // Default: false
+    //          true (will block user)
+    MAX_USER_TWEETS_BLOCK = false;
 
 
 // Main self-initializing function
@@ -9,21 +29,46 @@ var API = require('./api-functions'),
     var last_tweet_id = 0,
         searchResultsArr = [],
         blockedUsers = [],
+        badTweetIds = [],
         limitLockout = false;
 
     /** The Callback function for the Search API */
-    var searchCallback = function (response) {
+    var searchCallback = function(response)
+    {
         var payload = JSON.parse(response);
 
         // Iterating through tweets returned by the Search
-        payload.statuses.forEach(function (searchItem) {
+        payload.statuses.forEach(function (searchItem)
+        {
+          // Lots of checks to filter out bad tweets, other bots and contests that are likely not legitimate
 
-            // Further filtering out the retweets and tweets from blocked users
-            if (!searchItem.retweeted_status && blockedUsers.indexOf(searchItem.user.id) === -1) {
-
-                // Save the search item in the Search Results array
-                searchResultsArr.push(searchItem);
-            }
+          // is not already a retweet
+          if (!searchItem.retweeted_status)
+          {
+              // is not an ignored tweet
+              if (badTweetIds.indexOf(searchItem.id) === -1)
+              {
+                  // has enough retweets on the tweet for us to retweet it too (helps prove legitimacy)
+                  if (searchItem.retweet_count >= MIN_RETWEETS_NEEDED)
+                  {
+                      // user is not on our blocked list
+                      if (blockedUsers.indexOf(searchItem.user.id) === -1)
+                      {
+                          if (MAX_USER_TWEETS && searchItem.user.statuses_count < MAX_USER_TWEETS) // should we ignore users with high amounts of tweets (likely bots)
+                          {
+                              // Save the search item in the Search Results array
+                              searchResultsArr.push(searchItem);
+                          }
+                          else if (MAX_USER_TWEETS_BLOCK) // may be a spam bot, do we want to block them?
+                          {
+                              blockedUsers.push(searchItem.user.id);
+                              API.blockUser(searchItem.user.id);
+                              console.log("Blocking possible bot user " + searchItem.user.id);
+                          }
+                      }
+                  }
+              }
+          }
         });
 
         // If we have the next_results, search again for the rest (sort of a pagination)
@@ -110,15 +155,15 @@ var API = require('./api-functions'),
 
                 function error()
                 {
-                    console.error("RT Failed for", searchItem.id, ". Re-trying after a timeout.");
+                    console.error("RT Failed for", searchItem.id, ". Likely has already been retweeted. Adding to blacklist.");
 
-                    // If the RT fails, add the item back at the beginning of the array
-                    searchResultsArr.unshift(searchItem);
+                    // If the RT fails, blacklist it
+                    badTweetIds.push(searchItem.id);
 
-                    // Re-start after a timeout
+                    // Then, re-start the RT Worker
                     setTimeout(function () {
                         retweetWorker();
-                    }, RATE_LIMIT_EXCEEDED_TIMEOUT);
+                    }, RETWEET_TIMEOUT);
                 }
             );
         }
