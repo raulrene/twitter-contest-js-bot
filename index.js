@@ -155,13 +155,13 @@ var API = require('./api-functions'),
                 searchItem.id_str,
                 function success()
                 {
-                    // On success, try to Favorite and Follow
-                    if (searchItem.text.toLowerCase().indexOf("fav") > -1) {
-                        //API.favorite(searchItem.id_str);
+                    // On success, try to Favorite/Like and Follow
+                    if (searchItem.text.toLowerCase().indexOf("fav") > -1 || searchItem.text.toLowerCase().indexOf("like") > -1) {
+                        API.favorite(searchItem.id_str);
                         console.log("Favorite", searchItem.id);
                     }
                     if (searchItem.text.toLowerCase().indexOf("follow") > -1) {
-                        //API.follow(searchItem.user.id_str);
+                        API.follow(searchItem.user.id_str);
                         console.log("Follow", searchItem.user.screen_name);
                     }
 
