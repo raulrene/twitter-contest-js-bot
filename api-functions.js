@@ -62,15 +62,17 @@ var API = {
             });
     },
 
-    retweet: function (tweetId, cb, errorCb) {
+    retweet: function (tweetId, cb, errorHandler) {
         request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: oauth})
             .then(function() {
                 cb();
             })
-            .catch(function (err) {
-                console.error(err);
-                errCallback(tweetId);
-            }); 
+            .catch(function(err) {
+                if (errorHandler)
+                    errorHandler(err);
+                else
+                    console.error("An error occurred:", err.message);
+            });
     },
 
     favorite: function (tweetId) {

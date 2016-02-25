@@ -171,8 +171,12 @@ var API = require('./api-functions'),
                     }, RETWEET_TIMEOUT);
                 },
 
-                function error()
+                function error(errorCallback)
                 {
+                    // Currently will only apply to rate limit errors
+                    if (errorCallback)
+                        errorHandler(errorCallback);
+
                     console.error("RT Failed for", searchItem.id, ". Likely has already been retweeted. Adding to blacklist.");
 
                     // If the RT fails, blacklist it
