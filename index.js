@@ -214,17 +214,18 @@ var API = require('./api-functions'),
     }
 
 
-        // First, get the blocked users
-        API.getBlockedUsers(function (blockedList) {
+    // Initializing function, begins the program.
+    // First, gets the blocked users
+    API.getBlockedUsers(function (blockedList) {
 
-            blockedUsers = blockedList;
+        blockedUsers = blockedList;
 
-            // Start the Retweet worker after short grace period for search results to come in
-            setTimeout(function () {
-                retweetWorker();
-            }, 8000);
+        // Start searching (the Search is in itself a worker, as the callback continues to fetch data)
+        search();
 
-            // Start searching (the Search is in itself a worker, as the callback continues to fetch data)
-            search();
-        });
+        // Start the Retweet worker after short grace period for search results to come in
+        setTimeout(function () {
+            retweetWorker();
+        }, 8000);
+    });
 }());
