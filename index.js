@@ -95,20 +95,28 @@ var API = require('./api-functions'),
     };
 
     /** The error callback for the Search API */
-    var errorHandler = function (err) {
+    var errorHandler = function (err)
+    {
         console.error("Error!", err.message);
 
-        // If the error is "Rate limit exceeded", code 88 - try again after 10 minutes
-        if (JSON.parse(err.error).errors[0].code === 88)
+        try
         {
-            console.log("After " + RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + " minutes, I will try again to fetch some results...");
+            // If the error is "Rate limit exceeded", code 88 - try again after 10 minutes
+            if (JSON.parse(err.error).errors[0].code === 88)
+            {
+                console.log("After " + RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + " minutes, I will try again to fetch some results...");
 
-            limitLockout = true; // suspend other functions from running while lockout is in effect
+                limitLockout = true; // suspend other functions from running while lockout is in effect
 
-            // queue unsuspend of program
-            setTimeout(function () {
-                unlock();
-            }, RATE_LIMIT_EXCEEDED_TIMEOUT);
+                // queue unsuspend of program
+                setTimeout(function () {
+                    unlock();
+                }, RATE_LIMIT_EXCEEDED_TIMEOUT);
+            }
+        }
+        catch (err)
+        {
+            console.log("Possible unexpected token E" + err);
         }
     };
 
