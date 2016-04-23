@@ -103,8 +103,7 @@ var API = {
     {
         request.post({url: 'https://api.twitter.com/1.1/blocks/create.json?user_id=' + userId, oauth: oauth})
             .then(callbacks.default)
-            .catch(function(err)
-            {
+            .catch(function(err) {
                 console.error(err.message);
             });
     },

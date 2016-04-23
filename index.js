@@ -44,34 +44,26 @@ var API = require('./api-functions'),
         limitLockout = false;
 
     /** The Callback function for the Search API */
-    var searchCallback = function(response)
-    {
+    var searchCallback = function(response) {
         var payload = JSON.parse(response);
 
         // Iterating through tweets returned by the Search
-        payload.statuses.forEach(function (searchItem)
-        {
+        payload.statuses.forEach(function (searchItem) {
           // Lots of checks to filter out bad tweets, other bots and contests that are likely not legitimate
 
           // is not already a retweet
-          if (!searchItem.retweeted_status)
-          {
+          if (!searchItem.retweeted_status) {
               // is not an ignored tweet
-              if (badTweetIds.indexOf(searchItem.id) === -1)
-              {
+              if (badTweetIds.indexOf(searchItem.id) === -1) {
                   // has enough retweets on the tweet for us to retweet it too (helps prove legitimacy)
-                  if (searchItem.retweet_count >= MIN_RETWEETS_NEEDED)
-                  {
+                  if (searchItem.retweet_count >= MIN_RETWEETS_NEEDED) {
                       // user is not on our blocked list
-                      if (blockedUsers.indexOf(searchItem.user.id) === -1)
-                      {
-                          if (MAX_USER_TWEETS && searchItem.user.statuses_count < MAX_USER_TWEETS) // should we ignore users with high amounts of tweets (likely bots)
-                          {
+                      if (blockedUsers.indexOf(searchItem.user.id) === -1) {
+                          if (MAX_USER_TWEETS && searchItem.user.statuses_count < MAX_USER_TWEETS) { // should we ignore users with high amounts of tweets (likely bots)
                               // Save the search item in the Search Results array
                               searchResultsArr.push(searchItem);
                           }
-                          else if (MAX_USER_TWEETS_BLOCK) // may be a spam bot, do we want to block them?
-                          {
+                          else if (MAX_USER_TWEETS_BLOCK) { // may be a spam bot, do we want to block them?
                               blockedUsers.push(searchItem.user.id);
                               API.blockUser(searchItem.user.id);
                               console.log("Blocking possible bot user " + searchItem.user.id);
@@ -88,22 +80,18 @@ var API = require('./api-functions'),
         }
     };
 
-    function unlock()
-    {
+    function unlock() {
         console.log("Limit lockout time has passed, resuming program...");
         limitLockout = false;
     };
 
     /** The error callback for the Search API */
-    var errorHandler = function (err)
-    {
+    var errorHandler = function (err) {
         console.error("Error!", err.message);
 
-        try
-        {
+        try {
             // If the error is "Rate limit exceeded", code 88 - try again after 10 minutes
-            if (JSON.parse(err.error).errors[0].code === 88)
-            {
+            if (JSON.parse(err.error).errors[0].code === 88) {
                 console.log("After " + RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + " minutes, I will try again to fetch some results...");
 
                 limitLockout = true; // suspend other functions from running while lockout is in effect
@@ -114,23 +102,20 @@ var API = require('./api-functions'),
                 }, RATE_LIMIT_EXCEEDED_TIMEOUT);
             }
         }
-        catch (err)
-        {
+        catch (err) {
             console.log("Possible unexpected token E" + err);
         }
     };
 
     /** The Search function */
-    var search = function()
-    {
+    var search = function() {
         // do not search if limit lockout is in effect
         if (limitLockout)
             return;
 
         console.log("Searching for tweets...");
 
-        for (var i = 0; i < searchQueries.length; ++i)
-        {
+        for (var i = 0; i < searchQueries.length; ++i) {
             API.search({
                 // Without having the word "vote", and filtering out retweets - as much as possible
                 text: searchQueries[i],
@@ -148,11 +133,9 @@ var API = require('./api-functions'),
 
 
     /** The Retweet worker - also performs Favorite and Follow actions if necessary */
-    var retweetWorker = function()
-    {
+    var retweetWorker = function() {
         // Check if we have elements in the Result Array
-        if (searchResultsArr.length)
-        {
+        if (searchResultsArr.length) {
             // Pop the first element (by doing a shift() operation)
             var searchItem = searchResultsArr[0];
             searchResultsArr.shift();
@@ -161,8 +144,7 @@ var API = require('./api-functions'),
             console.log("Retweeting", searchItem.id);
             API.retweet(
                 searchItem.id_str,
-                function success()
-                {
+                function success() {
                     // On success, try to Favorite/Like and Follow
                     if (searchItem.text.toLowerCase().indexOf("fav") > -1 || searchItem.text.toLowerCase().indexOf("like") > -1) {
                         API.favorite(searchItem.id_str);
@@ -179,8 +161,7 @@ var API = require('./api-functions'),
                     }, RETWEET_TIMEOUT);
                 },
 
-                function error(errorCallback)
-                {
+                function error(errorCallback) {
                     // Currently will only apply to rate limit errors
                     if (errorCallback)
                         errorHandler(errorCallback);
@@ -196,11 +177,8 @@ var API = require('./api-functions'),
                     }, RETWEET_TIMEOUT);
                 }
             );
-        }
-        else // no search results left in array
-        {
-            if (limitLockout)
-            {
+        } else { // no search results left in array
+            if (limitLockout) {
                 // we must schedule this to rerun, or else the program will exit when a lockout occurs
                 setTimeout(function () {
                     retweetWorker();
@@ -219,10 +197,9 @@ var API = require('./api-functions'),
         }
     }
 
-    function sleepFor(sleepDuration)
-    {
+    function sleepFor(sleepDuration) {
         var now = new Date().getTime();
-        while(new Date().getTime() < now + sleepDuration) { /* do nothing */ }
+        while (new Date().getTime() < now + sleepDuration) { /* do nothing */ }
     }
 
 
