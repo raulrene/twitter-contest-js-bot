@@ -22,8 +22,9 @@ var callbacks = {
         }
     },
 
+    /** Processes the list of blocked users, appending each blocked user id to an array */
     processBlockedList: function (response) {
-        var result = JSON.parse(response),
+        var result      = JSON.parse(response),
             blockedList = [];
 
         result.users.forEach(function (user) {
@@ -37,11 +38,11 @@ var callbacks = {
 
 var API = {
     search: function (options) {
-        params =
-            "?q=" + encodeURIComponent(options.text),
-            "&count=" + options.count ? options.count : 100,
-            "&result_type=" + options.result_type ? options.result_type : 'popular',
-            "&since_id=" + options.since_id ? options.since_id : 0;
+        var params =
+                "?q=" + encodeURIComponent(options.text) +
+                "&count=" + (options.count ? options.count : 100) +
+                "&result_type=" + (options.result_type ? options.result_type : 'popular') +
+                "&since_id=" + (options.since_id ? options.since_id : 0);
 
         if (options.max_id) {
             params += "&max_id=" + options.max_id;
@@ -64,10 +65,10 @@ var API = {
 
     retweet: function (tweetId, cb, errorHandler) {
         request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: oauth})
-            .then(function() {
+            .then(function () {
                 cb();
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 if (errorHandler)
                     errorHandler(err);
                 else
@@ -99,11 +100,10 @@ var API = {
             });
     },
 
-    blockUser: function(userId)
-    {
+    blockUser: function (userId) {
         request.post({url: 'https://api.twitter.com/1.1/blocks/create.json?user_id=' + userId, oauth: oauth})
             .then(callbacks.default)
-            .catch(function(err) {
+            .catch(function (err) {
                 console.error(err.message);
             });
     },
@@ -123,7 +123,10 @@ var API = {
     },
 
     getTweetsForUser: function (userId, count, callback) {
-        request.get({url: 'https://api.twitter.com/1.1/statuses/user_timeline.json?user_id=' + userId + '&count=' + count, oauth: oauth})
+        request.get({
+            url: 'https://api.twitter.com/1.1/statuses/user_timeline.json?user_id=' + userId + '&count=' + count,
+            oauth: oauth
+        })
             .then(function (response) {
                 callback(JSON.parse(response));
             })
