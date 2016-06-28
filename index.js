@@ -2,11 +2,17 @@ var API                         = require('./api-functions'),
     RATE_LIMIT_EXCEEDED_TIMEOUT = 1000 * 60 * 10,               // 10 minutes
     RETWEET_TIMEOUT             = 1000 * 15,                    // 15 seconds
     RATE_SEARCH_TIMEOUT         = 1000 * 30,                    // 30 seconds
+    preferences                 = require("./config").Preferences,
 
     searchQueries               = [
-        "retweet to win -vote -filter:retweets OR RT to win -vote -filter:retweets",
-        "retweet 2 win -vote -filter:retweets OR RT 2 win -vote -filter:retweets"
+        "retweet to win",
+        "RT to win",
+        "retweet 2 win",
+        "RT 2 win"
     ],
+
+    // Appended at the end of search queries to filter out some data
+    searchQueryFilter           = " -vote -filter:retweets",
 
     // "Specifies what type of search results you would prefer to receive. The current default is “mixed.” Valid values include:"
     // Default: "recent"   (return only the most recent results in the response)
@@ -20,7 +26,7 @@ var API                         = require('./api-functions'),
     // Default: 10
     MIN_RETWEETS_NEEDED         = 10,
 
-    // Maxiumum amount of tweets a user can have before we do not retweet them.
+    // Maximum amount of tweets a user can have before we do not retweet them.
     // - Accounts with an extremely large amount of tweets are often bots,
     //    therefore we should ignore them and not retweet their tweets.
     // Default: 20000
@@ -116,10 +122,21 @@ var API                         = require('./api-functions'),
 
         console.log("Searching for tweets...");
 
+        var query,
+            preferredAccounts = " from:" + preferences.preferred_accounts.join(" OR from:");
+
         for (var i = 0; i < searchQueries.length; ++i) {
+            // Construct the query
+            query = searchQueries[i] + searchQueryFilter;
+
+            // Append preferred accounts if it's the case
+            if (preferredAccounts) {
+                query += preferredAccounts;
+            }
+
+            // Without having the word "vote", and filtering out retweets - as much as possible
             API.search({
-                // Without having the word "vote", and filtering out retweets - as much as possible
-                text: searchQueries[i],
+                text: query,
                 result_type: RESULT_TYPE,
                 callback: searchCallback,
                 error_callback: errorHandler,

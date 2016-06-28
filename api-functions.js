@@ -1,6 +1,6 @@
-var request = require('request-promise');
-var oauth = require("./config");
-var allItems = [];
+var request     = require('request-promise'),
+    oauth       = require("./config").Auth,
+    allItems    = [];
 
 //Callback functions
 var callbacks = {
