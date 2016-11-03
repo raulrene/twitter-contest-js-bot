@@ -233,8 +233,8 @@ var API                         = require('./api-functions'),
         search();
 
         // Start the Retweet worker after short grace period for search results to come in
-        // setTimeout(function () {
-        //     retweetWorker();
-        // }, 8000);
+        setTimeout(function () {
+            retweetWorker();
+        }, 8000);
     });
 }());
