@@ -4,7 +4,7 @@ var request     = require('request-promise'),
 
 //Callback functions
 var callbacks = {
-    default: function (response) {
+    defaultCb: function (response) {
         var result = JSON.parse(response);
 
         // Case when the callback is used after a search
@@ -17,7 +17,7 @@ var callbacks = {
 
             // If we have the next_results, search again for the rest (sort of a pagination)
             if (result.search_metadata.next_results) {
-                API.searchByStringParam(result.search_metadata.next_results, callbacks.default);
+                API.searchByStringParam(result.search_metadata.next_results, callbacks.defaultCb);
             }
         }
     },

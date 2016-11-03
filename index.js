@@ -58,7 +58,7 @@ var API                         = require('./api-functions'),
             // Lots of checks to filter out bad tweets, other bots and contests that are likely not legitimate
 
             // is not already a retweet
-            if (!searchItem.retweeted_status) {
+            if (!searchItem.retweeted_status && !searchItem.quoted_status_id) {
                 // is not an ignored tweet
                 if (badTweetIds.indexOf(searchItem.id) === -1) {
                     // has enough retweets on the tweet for us to retweet it too (helps prove legitimacy)
@@ -233,8 +233,8 @@ var API                         = require('./api-functions'),
         search();
 
         // Start the Retweet worker after short grace period for search results to come in
-        setTimeout(function () {
-            retweetWorker();
-        }, 8000);
+        // setTimeout(function () {
+        //     retweetWorker();
+        // }, 8000);
     });
 }());
