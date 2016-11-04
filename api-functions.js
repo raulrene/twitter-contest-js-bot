@@ -1,6 +1,6 @@
-var request     = require('request-promise'),
-    oauth       = require("./config").Auth,
-    allItems    = [];
+const request = require('request-promise');
+const auth = require('./config').auth;
+const allItems = [];
 
 //Callback functions
 var callbacks = {
@@ -52,7 +52,7 @@ var API = {
     },
 
     searchByStringParam: function (stringParams, callback, errorHandler) {
-        request.get({url: 'https://api.twitter.com/1.1/search/tweets.json' + stringParams, oauth: oauth})
+        request.get({url: 'https://api.twitter.com/1.1/search/tweets.json' + stringParams, oauth: auth})
             .then(callback)
             .catch(function (err) {
                 if (errorHandler) {
@@ -64,7 +64,7 @@ var API = {
     },
 
     retweet: function (tweetId, cb, errorHandler) {
-        request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: oauth})
+        request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: auth})
             .then(function () {
                 cb();
             })
@@ -77,7 +77,7 @@ var API = {
     },
 
     favorite: function (tweetId) {
-        request.post({url: 'https://api.twitter.com/1.1/favorites/create.json?id=' + tweetId, oauth: oauth})
+        request.post({url: 'https://api.twitter.com/1.1/favorites/create.json?id=' + tweetId, oauth: auth})
             .then(callbacks.default)
             .catch(function (err) {
                 console.error(err.message);
@@ -85,7 +85,7 @@ var API = {
     },
 
     follow: function (userId) {
-        request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?user_id=' + userId, oauth: oauth})
+        request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?user_id=' + userId, oauth: auth})
             .then(callbacks.default)
             .catch(function (err) {
                 console.error(err.message);
@@ -93,7 +93,7 @@ var API = {
     },
 
     followByUsername: function (userName) {
-        request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?screen_name=' + userName, oauth: oauth})
+        request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?screen_name=' + userName, oauth: auth})
             .then(callbacks.default)
             .catch(function (err) {
                 console.error(err.message);
@@ -101,7 +101,7 @@ var API = {
     },
 
     blockUser: function (userId) {
-        request.post({url: 'https://api.twitter.com/1.1/blocks/create.json?user_id=' + userId, oauth: oauth})
+        request.post({url: 'https://api.twitter.com/1.1/blocks/create.json?user_id=' + userId, oauth: auth})
             .then(callbacks.default)
             .catch(function (err) {
                 console.error(err.message);
@@ -109,7 +109,7 @@ var API = {
     },
 
     getBlockedUsers: function (callback) {
-        request.get({url: 'https://api.twitter.com/1.1/blocks/list.json', oauth: oauth})
+        request.get({url: 'https://api.twitter.com/1.1/blocks/list.json', oauth: auth})
             .then(function (response) {
                 var blockedList = callbacks.processBlockedList(response);
 
@@ -125,7 +125,7 @@ var API = {
     getTweetsForUser: function (userId, count, callback) {
         request.get({
             url: 'https://api.twitter.com/1.1/statuses/user_timeline.json?user_id=' + userId + '&count=' + count,
-            oauth: oauth
+            oauth: auth
         })
             .then(function (response) {
                 callback(JSON.parse(response));
@@ -136,7 +136,7 @@ var API = {
     },
 
     deleteTweet: function (tweetId) {
-        request.post({url: 'https://api.twitter.com/1.1/statuses/destroy/' + tweetId + ".json", oauth: oauth})
+        request.post({url: 'https://api.twitter.com/1.1/statuses/destroy/' + tweetId + ".json", oauth: auth})
             .then(function () {
                 console.log("Deleted tweet", tweetId);
             })

@@ -1,44 +1,5 @@
-var API                         = require('./api-functions'),
-    RATE_LIMIT_EXCEEDED_TIMEOUT = 1000 * 60 * 10,               // 10 minutes
-    RETWEET_TIMEOUT             = 1000 * 15,                    // 15 seconds
-    RATE_SEARCH_TIMEOUT         = 1000 * 30,                    // 30 seconds
-    preferences                 = require("./config").Preferences,
-
-    searchQueries               = [
-        "retweet to win",
-        "RT to win",
-        "retweet 2 win",
-        "RT 2 win"
-    ],
-
-    // Appended at the end of search queries to filter out some data
-    searchQueryFilter           = " -vote -filter:retweets",
-
-    // "Specifies what type of search results you would prefer to receive. The current default is “mixed.” Valid values include:"
-    // Default: "recent"   (return only the most recent results in the response)
-    //          "mixed"    (Include both popular and real time results in the response)
-    //          "popular"  (return only the most popular results in the response)
-    RESULT_TYPE                 = "mixed",
-
-    // Minimum amount of retweets a tweet needs before we retweet it.
-    // - Significantly reduces the amount of fake contests retweeted and stops
-    //    retweeting other bots that retweet retweets of other bots.
-    // Default: 10
-    MIN_RETWEETS_NEEDED         = 10,
-
-    // Maximum amount of tweets a user can have before we do not retweet them.
-    // - Accounts with an extremely large amount of tweets are often bots,
-    //    therefore we should ignore them and not retweet their tweets.
-    // Default: 20000
-    //          0 (disables)
-    MAX_USER_TWEETS             = 20000,
-
-    // If option above is enabled, allow us to block them.
-    // - Blocking users do not prevent their tweets from appearing in search,
-    //    but this will ensure you do not accidentally retweet them still.
-    // Default: false
-    //          true (will block user)
-    MAX_USER_TWEETS_BLOCK       = false;
+const API = require('./api-functions');
+const config = require("./config");
 
 
 // Main self-initializing function
@@ -62,14 +23,14 @@ var API                         = require('./api-functions'),
                 // is not an ignored tweet
                 if (badTweetIds.indexOf(searchItem.id) === -1) {
                     // has enough retweets on the tweet for us to retweet it too (helps prove legitimacy)
-                    if (searchItem.retweet_count >= MIN_RETWEETS_NEEDED) {
+                    if (searchItem.retweet_count >= config.MIN_RETWEETS_NEEDED) {
                         // user is not on our blocked list
                         if (blockedUsers.indexOf(searchItem.user.id) === -1) {
-                            if (MAX_USER_TWEETS && searchItem.user.statuses_count < MAX_USER_TWEETS) { // should we ignore users with high amounts of tweets (likely bots)
+                            if (config.MAX_USER_TWEETS && searchItem.user.statuses_count < config.MAX_USER_TWEETS) { // should we ignore users with high amounts of tweets (likely bots)
                                 // Save the search item in the Search Results array
                                 searchResultsArr.push(searchItem);
                             }
-                            else if (MAX_USER_TWEETS_BLOCK) { // may be a spam bot, do we want to block them?
+                            else if (config.MAX_USER_TWEETS_BLOCK) { // may be a spam bot, do we want to block them?
                                 blockedUsers.push(searchItem.user.id);
                                 API.blockUser(searchItem.user.id);
                                 console.log("Blocking possible bot user " + searchItem.user.id);
@@ -98,14 +59,14 @@ var API                         = require('./api-functions'),
         try {
             // If the error is "Rate limit exceeded", code 88 - try again after 10 minutes
             if (JSON.parse(err.error).errors[0].code === 88) {
-                console.log("After " + RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + " minutes, I will try again to fetch some results...");
+                console.log("After " + config.RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + " minutes, I will try again to fetch some results...");
 
                 limitLockout = true; // suspend other functions from running while lockout is in effect
 
                 // queue unsuspend of program
                 setTimeout(function () {
                     unlock();
-                }, RATE_LIMIT_EXCEEDED_TIMEOUT);
+                }, config.RATE_LIMIT_EXCEEDED_TIMEOUT);
             }
         }
         catch (err) {
@@ -123,11 +84,11 @@ var API                         = require('./api-functions'),
         console.log("Searching for tweets...");
 
         var query,
-            preferredAccounts = " from:" + preferences.preferred_accounts.join(" OR from:");
+            preferredAccounts = " from:" + config.preferred_accounts.join(" OR from:");
 
-        for (var i = 0; i < searchQueries.length; ++i) {
+        for (var i = 0; i < config.SEARCH_QUERIES.length; ++i) {
             // Construct the query
-            query = searchQueries[i] + searchQueryFilter;
+            query = config.SEARCH_QUERIES[i] + config.SEARCH_QUERY_FILTERS;
 
             // Append preferred accounts if it's the case
             if (preferredAccounts) {
@@ -137,14 +98,14 @@ var API                         = require('./api-functions'),
             // Without having the word "vote", and filtering out retweets - as much as possible
             API.search({
                 text: query,
-                result_type: RESULT_TYPE,
+                result_type: config.RESULT_TYPE,
                 callback: searchCallback,
                 error_callback: errorHandler,
                 since_id: last_tweet_id
             });
 
             // we need to wait between search queries so we do not trigger rate limit lockout
-            sleepFor(RATE_SEARCH_TIMEOUT);
+            sleepFor(config.RATE_SEARCH_TIMEOUT);
             console.log("Sleeping between searches so we don't trigger rate limit...");
         }
     };
@@ -176,7 +137,7 @@ var API                         = require('./api-functions'),
                     // Then, re-queue the RT Worker
                     setTimeout(function () {
                         retweetWorker();
-                    }, RETWEET_TIMEOUT);
+                    }, config.RETWEET_TIMEOUT);
                 },
 
                 function error(errorCallback) {
@@ -192,7 +153,7 @@ var API                         = require('./api-functions'),
                     // Then, re-start the RT Worker
                     setTimeout(function () {
                         retweetWorker();
-                    }, RETWEET_TIMEOUT);
+                    }, config.RETWEET_TIMEOUT);
                 }
             );
         } else { // no search results left in array
@@ -200,18 +161,18 @@ var API                         = require('./api-functions'),
                 // we must schedule this to rerun, or else the program will exit when a lockout occurs
                 setTimeout(function () {
                     retweetWorker();
-                }, RATE_SEARCH_TIMEOUT);
+                }, config.RATE_SEARCH_TIMEOUT);
                 return;
             }
 
-            console.log("No more results... will search and analyze again in " + RATE_SEARCH_TIMEOUT / 1000 + " seconds.");
+            console.log("No more results... will search and analyze again in " + config.RATE_SEARCH_TIMEOUT / 1000 + " seconds.");
 
             // go fetch new results
             search();
 
             setTimeout(function () {
                 retweetWorker();
-            }, RATE_SEARCH_TIMEOUT);
+            }, config.RATE_SEARCH_TIMEOUT);
         }
     };
 
@@ -234,7 +195,7 @@ var API                         = require('./api-functions'),
 
         // Start the Retweet worker after short grace period for search results to come in
         setTimeout(function () {
-            retweetWorker();
+            //retweetWorker();
         }, 8000);
     });
 }());
