@@ -50,19 +50,34 @@ const callbacks = {
 
 /* API methods */
 const API = {
+
+    /**
+     * Search for tweets
+     * @param options {Object} Options object containing:
+     * - text (Required) : String
+     * - callback (optional) : Function
+     * - error_callback (optional) : Function
+     * - count (optional) : Number
+     * - result_type (optional) : String
+     * - since_id (optional) : Number - start search from this ID
+     * - max_id (optional) : Number - end search on this ID
+     */
     search: (options) => {
+        const {text, callback = callbacks.defaultCb, count = 100, result_type = 'popular', since_id = 0, max_id} = options;
+
         let params =
                 `?q=${encodeURIComponent(options.text)}` +
-                `&count=${(options.count ? options.count : 100)}` +
-                `&result_type=${(options.result_type ? options.result_type : 'popular')}` +
-                `&since_id=${(options.since_id ? options.since_id : 0)}`;
+                `&count=${count}` +
+                `&result_type=${result_type}` +
+                `&since_id=${since_id}`;
 
-        if (options.max_id) {
-            params += `&max_id=${options.max_id}`;
+        if (max_id) {
+            params += `&max_id=${max_id}`;
         }
 
-        API.searchByStringParam(params, options.callback ? options.callback : callbacks.defaultCb, options.error_callback);
+        API.searchByStringParam(params, callback, options.error_callback);
     },
+
 
     searchByStringParam: (stringParams, callback, errorHandler = callbacks.errorHandler) => {
         request.get({url: `${rootUrl}/search/tweets.json${stringParams}`, oauth})
@@ -72,7 +87,7 @@ const API = {
 
     retweet: (tweetId, cb, errorHandler = callbacks.errorHandler) => {
         request.post({url: `${rootUrl}/statuses/retweet/${tweetId}.json`, oauth})
-            .then(() => cb())
+            .then(cb)
             .catch((err) => errorHandler(err));
     },
 

@@ -1,6 +1,6 @@
 {
   "name": "Twitter contest JS bot",
-  "description": "A Javascript bot that searches for tweets about contests  and retweets them.",
+  "description": "A Javascript bot that searches for tweets about contests and retweets them.",
   "author": "Raul Rene Lepsa <raul.lepsa@gmail.com>",
   "dependencies": {
     "request-promise": "^0.4.3"

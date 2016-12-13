@@ -12,9 +12,7 @@ const API = require('./api-functions');
     API.getBlockedUsers();
 
     // Get the latest N tweets and delete them
-    API.getTweetsForUser('2501185554', 1, (tweets) => {
-        tweets.forEach((tweet) => {
-            API.deleteTweet(tweet.id_str);
-        });
-    });
+    API.getTweetsForUser('2501185554', 1, (tweets) =>
+        tweets.forEach((tweet) => API.deleteTweet(tweet.id_str))
+    );
 })();
