@@ -1,9 +1,15 @@
 const request = require('request-promise');
-const auth = require('./config').auth;
+const oauth = require('./config').auth;
 const allItems = [];
+const rootUrl = 'https://api.twitter.com/1.1';
 
-//Callback functions
+/* Callback functions */
 const callbacks = {
+
+    /**
+     * Default callback
+     * @param response {String} String representation of the response object
+     */
     defaultCb: (response) => {
         const result = JSON.parse(response);
 
@@ -11,7 +17,7 @@ const callbacks = {
         if (result && result.statuses) {
             result.statuses.forEach((item) => allItems.push(item.id));
 
-            console.log("So far we have a total of:", allItems.length);
+            console.log('So far we have a total of:', allItems.length);
 
             // If we have the next_results, search again for the rest (sort of a pagination)
             if (result.search_metadata.next_results) {
@@ -20,115 +26,96 @@ const callbacks = {
         }
     },
 
-    /** Processes the list of blocked users, appending each blocked user id to an array */
+    /**
+     * Default error handler. Just prints out the error.
+     * @param err {Object} error thrown
+     */
+    errorHandler: (err) => console.error('An error occurred:', err.message),
+
+    /**
+     * Processes the list of blocked users, appending each blocked user id to an array
+     * @param response {String} String representation of the Twitter response object
+     * @returns {Array} IDs of blocked users
+     */
     processBlockedList: (response) => {
         const result = JSON.parse(response);
         let blockedList = [];
 
         result.users.forEach((user) => blockedList.push(user.id));
-        console.log("Your list of blocked users:\n", blockedList);
+        console.log('Your list of blocked users:\n', blockedList);
 
         return blockedList;
     }
 };
 
+/* API methods */
 const API = {
     search: (options) => {
-        var params =
-                "?q=" + encodeURIComponent(options.text) +
-                "&count=" + (options.count ? options.count : 100) +
-                "&result_type=" + (options.result_type ? options.result_type : 'popular') +
-                "&since_id=" + (options.since_id ? options.since_id : 0);
+        let params =
+                `?q=${encodeURIComponent(options.text)}` +
+                `&count=${(options.count ? options.count : 100)}` +
+                `&result_type=${(options.result_type ? options.result_type : 'popular')}` +
+                `&since_id=${(options.since_id ? options.since_id : 0)}`;
 
         if (options.max_id) {
-            params += "&max_id=" + options.max_id;
+            params += `&max_id=${options.max_id}`;
         }
 
         API.searchByStringParam(params, options.callback ? options.callback : callbacks.defaultCb, options.error_callback);
     },
 
-    searchByStringParam: (stringParams, callback, errorHandler) => {
-        request.get({url: 'https://api.twitter.com/1.1/search/tweets.json' + stringParams, oauth: auth})
+    searchByStringParam: (stringParams, callback, errorHandler = callbacks.errorHandler) => {
+        request.get({url: `${rootUrl}/search/tweets.json${stringParams}`, oauth})
             .then(callback)
-            .catch((err) => {
-                    if (errorHandler) {
-                        errorHandler(err);
-                    } else {
-                        console.error("An error occurred:", err.message);
-                    }
-                }
-            )
-        ;
+            .catch((err) => errorHandler(err));
     },
 
-    retweet: (tweetId, cb, errorHandler) => {
-        request.post({url: 'https://api.twitter.com/1.1/statuses/retweet/' + tweetId + '.json', oauth: auth})
+    retweet: (tweetId, cb, errorHandler = callbacks.errorHandler) => {
+        request.post({url: `${rootUrl}/statuses/retweet/${tweetId}.json`, oauth})
             .then(() => cb())
-            .catch((err) => {
-                    if (errorHandler)
-                        errorHandler(err);
-                    else
-                        console.error("An error occurred:", err.message);
-                }
-            )
-        ;
+            .catch((err) => errorHandler(err));
     },
 
     favorite: (tweetId) => {
-        request.post({url: 'https://api.twitter.com/1.1/favorites/create.json?id=' + tweetId, oauth: auth})
+        request.post({url: `${rootUrl}/favorites/create.json?id=${tweetId}`, oauth})
             .then(callbacks.defaultCb)
-            .catch((err) => console.error(err.message));
+            .catch((err) => callbacks.errorHandler(err));
     },
 
     follow: (userId) => {
-        request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?user_id=' + userId, oauth: auth})
+        request.post({url: `${rootUrl}/friendships/create.json?user_id=${userId}`, oauth})
             .then(callbacks.defaultCb)
-            .catch((err) => console.error(err.message));
+            .catch((err) => callbacks.errorHandler(err));
     },
 
     followByUsername: (userName) => {
-        request.post({url: 'https://api.twitter.com/1.1/friendships/create.json?screen_name=' + userName, oauth: auth})
+        request.post({url: `${rootUrl}/friendships/create.json?screen_name=${userName}`, oauth})
             .then(callbacks.defaultCb)
-            .catch((err) => console.error(err.message));
+            .catch((err) => callbacks.errorHandler(err));
     },
 
     blockUser: (userId) => {
-        request.post({url: 'https://api.twitter.com/1.1/blocks/create.json?user_id=' + userId, oauth: auth})
+        request.post({url: `${rootUrl}/blocks/create.json?user_id=${userId}`, oauth})
             .then(callbacks.defaultCb)
-            .catch((err) => console.error(err.message));
+            .catch((err) => callbacks.errorHandler(err));
     },
 
-    getBlockedUsers: (callback) => {
-        request.get({url: 'https://api.twitter.com/1.1/blocks/list.json', oauth: auth})
-            .then((response) => {
-                var blockedList = callbacks.processBlockedList(response);
-
-                if (callback) {
-                    callback(blockedList);
-                }
-            })
-            .catch((err) => console.error("Error retrieving blocked users:", err.message));
+    getBlockedUsers: (cb) => {
+        request.get({url: `${rootUrl}/blocks/list.json`, oauth})
+            .then((response) => cb && cb(callbacks.processBlockedList(response)))
+            .catch((err) => console.error('Error retrieving blocked users:', err.message));
     },
 
     getTweetsForUser: (userId, count, callback) => {
-        request.get({
-            url: 'https://api.twitter.com/1.1/statuses/user_timeline.json?user_id=' + userId + '&count=' + count,
-            oauth: auth
-        })
-            .then((response) => {
-                callback(JSON.parse(response));
-            })
-            .catch((err) => {
-                console.error(err.message);
-            });
+        request.get({url: `${rootUrl}/statuses/user_timeline.json?user_id=${userId}&count=${count}`, oauth})
+            .then((response) => callback(JSON.parse(response)))
+            .catch((err) => callbacks.errorHandler(err));
     },
 
     deleteTweet: (tweetId) => {
-        request.post({url: 'https://api.twitter.com/1.1/statuses/destroy/' + tweetId + ".json", oauth: auth})
-            .then(() => {
-                console.log("Deleted tweet", tweetId);
-            })
-            .catch((err) => console.error(err.message));
+        request.post({url: `${rootUrl}/statuses/destroy/${tweetId}.json`, oauth})
+            .then(() => console.log('Deleted tweet', tweetId))
+            .catch((err) => callbacks.errorHandler(err));
     }
 };
 
