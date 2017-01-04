@@ -22,7 +22,7 @@ const API = {
      * - max_id (optional) : Number - end search on this ID
      */
     search: (options) => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const {text, count = 100, result_type = 'popular', since_id = 0, max_id} = options;
 
             let params =
@@ -36,7 +36,7 @@ const API = {
             }
 
             allItems = [];
-            API.searchByStringParam(params).then((items) => resolve(items));
+            API.searchByStringParam(params).then((items) => resolve(items)).catch((err) => reject(err));
         });
     },
 
@@ -52,7 +52,7 @@ const API = {
                 const result = JSON.parse(res);
 
                 if (result && result.statuses) {
-                    result.statuses.forEach((item) => allItems.push(item.id));
+                    result.statuses.forEach(item => allItems.push(item));
                     console.log('So far we have a total of:', allItems.length);
 
                     // If we have the next_results, search again for the rest (sort of a pagination)
@@ -68,8 +68,8 @@ const API = {
             };
 
             request.get({url: `${rootUrl}/search/tweets.json${stringParams}`, oauth})
-                .then((res) => searchCallback(res))
-                .catch((err) => reject(err));
+                .then(res => searchCallback(res))
+                .catch(err => reject(err));
         })
     ,
 
