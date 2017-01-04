@@ -1,240 +1,178 @@
-var API                         = require('./api-functions'),
-    RATE_LIMIT_EXCEEDED_TIMEOUT = 1000 * 60 * 10,               // 10 minutes
-    RETWEET_TIMEOUT             = 1000 * 15,                    // 15 seconds
-    RATE_SEARCH_TIMEOUT         = 1000 * 30,                    // 30 seconds
-    preferences                 = require("./config").Preferences,
+const API = require('./api-functions');
+const config = require('./config');
 
-    searchQueries               = [
-        "retweet to win",
-        "RT to win",
-        "retweet 2 win",
-        "RT 2 win"
-    ],
+/** @class ContestJSBot */
+class ContestJSBot {
 
-    // Appended at the end of search queries to filter out some data
-    searchQueryFilter           = " -vote -filter:retweets",
+    constructor() {
+        this.last_tweet_id = 0;
+        this.searchResultsArr = [];
+        this.blockedUsers = [];
+        this.badTweetIds = [];
+        this.limitLockout = false;
+    }
 
-    // "Specifies what type of search results you would prefer to receive. The current default is “mixed.” Valid values include:"
-    // Default: "recent"   (return only the most recent results in the response)
-    //          "mixed"    (Include both popular and real time results in the response)
-    //          "popular"  (return only the most popular results in the response)
-    RESULT_TYPE                 = "mixed",
+    /** Start the bot */
+    start() {
+        // Begin the program by fetching the blocked users list for the current user
+        API.getBlockedUsers()
+            .then(blockedList => {
+                this.blockedUsers = Object.assign([], blockedList);
 
-    // Minimum amount of retweets a tweet needs before we retweet it.
-    // - Significantly reduces the amount of fake contests retweeted and stops
-    //    retweeting other bots that retweet retweets of other bots.
-    // Default: 10
-    MIN_RETWEETS_NEEDED         = 10,
+                // Start searching (the Search is in itself a worker, as the callback continues to fetch data)
+                this.search();
 
-    // Maximum amount of tweets a user can have before we do not retweet them.
-    // - Accounts with an extremely large amount of tweets are often bots,
-    //    therefore we should ignore them and not retweet their tweets.
-    // Default: 20000
-    //          0 (disables)
-    MAX_USER_TWEETS             = 20000,
-
-    // If option above is enabled, allow us to block them.
-    // - Blocking users do not prevent their tweets from appearing in search,
-    //    but this will ensure you do not accidentally retweet them still.
-    // Default: false
-    //          true (will block user)
-    MAX_USER_TWEETS_BLOCK       = false;
-
-
-// Main self-initializing function
-(function () {
-    var last_tweet_id    = 0,
-        searchResultsArr = [],
-        blockedUsers     = [],
-        badTweetIds      = [],
-        limitLockout     = false;
-
-    /** The Callback function for the Search API */
-    var searchCallback = function (response) {
-        var payload = JSON.parse(response);
-
-        // Iterating through tweets returned by the Search
-        payload.statuses.forEach(function (searchItem) {
-            // Lots of checks to filter out bad tweets, other bots and contests that are likely not legitimate
-
-            // is not already a retweet
-            if (!searchItem.retweeted_status && !searchItem.quoted_status_id) {
-                // is not an ignored tweet
-                if (badTweetIds.indexOf(searchItem.id) === -1) {
-                    // has enough retweets on the tweet for us to retweet it too (helps prove legitimacy)
-                    if (searchItem.retweet_count >= MIN_RETWEETS_NEEDED) {
-                        // user is not on our blocked list
-                        if (blockedUsers.indexOf(searchItem.user.id) === -1) {
-                            if (MAX_USER_TWEETS && searchItem.user.statuses_count < MAX_USER_TWEETS) { // should we ignore users with high amounts of tweets (likely bots)
-                                // Save the search item in the Search Results array
-                                searchResultsArr.push(searchItem);
-                            }
-                            else if (MAX_USER_TWEETS_BLOCK) { // may be a spam bot, do we want to block them?
-                                blockedUsers.push(searchItem.user.id);
-                                API.blockUser(searchItem.user.id);
-                                console.log("Blocking possible bot user " + searchItem.user.id);
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // If we have the next_results, search again for the rest (sort of a pagination)
-        if (payload.search_metadata.next_results) {
-            API.searchByStringParam(payload.search_metadata.next_results, searchCallback);
-        }
-    };
-
-    var unlock = function () {
-        console.log("Limit lockout time has passed, resuming program...");
-        limitLockout = false;
-    };
-
-    /** The error callback for the Search API */
-    var errorHandler = function (err) {
-        console.error("Error!", err.message);
-
-        try {
-            // If the error is "Rate limit exceeded", code 88 - try again after 10 minutes
-            if (JSON.parse(err.error).errors[0].code === 88) {
-                console.log("After " + RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + " minutes, I will try again to fetch some results...");
-
-                limitLockout = true; // suspend other functions from running while lockout is in effect
-
-                // queue unsuspend of program
-                setTimeout(function () {
-                    unlock();
-                }, RATE_LIMIT_EXCEEDED_TIMEOUT);
-            }
-        }
-        catch (err) {
-            console.log("Possible unexpected token E" + err);
-        }
-    };
+                // Start the Retweet worker after short grace period for search results to come in
+                setTimeout(() => this.retweetWorker(), config.RETWEET_TIMEOUT);
+            })
+            .catch(err => console.error('Your credentials are not valid. Check the config.js file and ensure you supply the correct API keys.', err));
+    }
 
     /** The Search function */
-    var search = function () {
-        // do not search if limit lockout is in effect
-        if (limitLockout) {
-            return;
-        }
+    search() {
+        // Don't search if limit lockout is in effect
+        if (this.limitLockout) return;
 
-        console.log("Searching for tweets...");
+        const since_id = this.last_tweet_id;
+        console.log('[Search] Searching for tweets...');
 
-        var query,
-            preferredAccounts = " from:" + preferences.preferred_accounts.join(" OR from:");
-
-        for (var i = 0; i < searchQueries.length; ++i) {
+        let doSearch = (index) => {
             // Construct the query
-            query = searchQueries[i] + searchQueryFilter;
+            let text = config.SEARCH_QUERIES[index] + config.SEARCH_QUERY_FILTERS;
 
             // Append preferred accounts if it's the case
-            if (preferredAccounts) {
-                query += preferredAccounts;
+            if (config.PREFERRED_ACCOUNTS) {
+                text += ` from:${config.PREFERRED_ACCOUNTS.join(' OR from:')}`;
             }
 
-            // Without having the word "vote", and filtering out retweets - as much as possible
-            API.search({
-                text: query,
-                result_type: RESULT_TYPE,
-                callback: searchCallback,
-                error_callback: errorHandler,
-                since_id: last_tweet_id
-            });
+            API.search({text, result_type: config.RESULT_TYPE, since_id})
+                .then(res => {
+                    // Call the search callback to process the data
+                    this.searchCallback(res);
 
-            // we need to wait between search queries so we do not trigger rate limit lockout
-            sleepFor(RATE_SEARCH_TIMEOUT);
-            console.log("Sleeping between searches so we don't trigger rate limit...");
-        }
-    };
-
-
-    /** The Retweet worker - also performs Favorite and Follow actions if necessary */
-    var retweetWorker = function () {
-        // Check if we have elements in the Result Array
-        if (searchResultsArr.length) {
-            // Pop the first element (by doing a shift() operation)
-            var searchItem = searchResultsArr[0];
-            searchResultsArr.shift();
-
-            // Retweet
-            console.log("Retweeting", searchItem.id);
-            API.retweet(
-                searchItem.id_str,
-                function success() {
-                    // On success, try to Favorite/Like and Follow
-                    if (searchItem.text.toLowerCase().indexOf("fav") > -1 || searchItem.text.toLowerCase().indexOf("like") > -1) {
-                        API.favorite(searchItem.id_str);
-                        console.log("Favorite", searchItem.id);
+                    if (config.SEARCH_QUERIES[index + 1]) {
+                        // Sleep between searches so we do not trigger rate limit lockout
+                        console.log(`[Search] Sleeping for ${config.RATE_SEARCH_TIMEOUT / 1000} seconds between searches so we don't trigger rate limit`);
+                        setTimeout(() => doSearch(index++), config.RATE_SEARCH_TIMEOUT);
                     }
-                    if (searchItem.text.toLowerCase().indexOf("follow") > -1) {
-                        API.follow(searchItem.user.id_str);
-                        console.log("Follow", searchItem.user.screen_name);
-                    }
+                })
+                .catch(err => this.errorHandler(err));
+        };
 
-                    // Then, re-queue the RT Worker
-                    setTimeout(function () {
-                        retweetWorker();
-                    }, RETWEET_TIMEOUT);
-                },
+        doSearch(0);
+    }
 
-                function error(errorCallback) {
-                    // Currently will only apply to rate limit errors
-                    if (errorCallback)
-                        errorHandler(errorCallback);
+    /** The Callback function for the Search API */
+    searchCallback(tweets) {
 
-                    console.error("RT Failed for", searchItem.id, ". Likely has already been retweeted. Adding to blacklist.");
+        // Iterate through tweets returned by the Search
+        tweets.forEach(searchItem => {
 
-                    // If the RT fails, blacklist it
-                    badTweetIds.push(searchItem.id);
+            // Lots of checks to filter out bad tweets, other bots and contests that are likely not legitimate :
+            // If it's not already a retweet
+            if (searchItem.retweeted_status || searchItem.quoted_status_id) return;
 
-                    // Then, re-start the RT Worker
-                    setTimeout(function () {
-                        retweetWorker();
-                    }, RETWEET_TIMEOUT);
+            // It's not an ignored tweet
+            if (this.badTweetIds.indexOf(searchItem.id) > -1) return;
+
+            // has enough retweets on the tweet for us to retweet it too (helps prove legitimacy)
+            if (searchItem.retweet_count < config.MIN_RETWEETS_NEEDED) return;
+
+            // user is not on our blocked list
+            if (this.blockedUsers.indexOf(searchItem.user.id) > -1) return;
+
+            // We ignore users with high amounts of tweets (likely bots)
+            if (config.MAX_USER_TWEETS && searchItem.user.statuses_count >= config.MAX_USER_TWEETS) {
+                // may be a spam bot, do we want to block them?
+                if (config.MAX_USER_TWEETS_BLOCK) {
+                    this.blockedUsers.push(searchItem.user.id);
+                    API.blockUser(searchItem.user.id)
+                        .then(() => console.log('Blocked possible bot user' + searchItem.user.id));
                 }
-            );
-        } else { // no search results left in array
-            if (limitLockout) {
-                // we must schedule this to rerun, or else the program will exit when a lockout occurs
-                setTimeout(function () {
-                    retweetWorker();
-                }, RATE_SEARCH_TIMEOUT);
                 return;
             }
 
-            console.log("No more results... will search and analyze again in " + RATE_SEARCH_TIMEOUT / 1000 + " seconds.");
+            // Save the search item in the Search Results array
+            this.searchResultsArr.push(searchItem);
+        });
+    }
+
+    /** The error callback for the Search API */
+    errorHandler(err) {
+        console.error('[Error]', err);
+
+        try {
+            // If the error is 'Rate limit exceeded', code 88 - try again after 10 minutes
+            if (JSON.parse(err.error).errors[0].code === 88) {
+                console.log('After ' + config.RATE_LIMIT_EXCEEDED_TIMEOUT / 60000 + ' minutes, I will try again to fetch some results...');
+
+                this.limitLockout = true; // suspend other functions from running while lockout is in effect
+
+                // Queue resume of program by setting the lockout to false
+                setTimeout(() => this.limitLockout = false, config.RATE_LIMIT_EXCEEDED_TIMEOUT);
+            }
+        }
+        catch (err) {
+            console.log('[Error]', err);
+        }
+    }
+
+
+    /** The Retweet worker - also performs Favorite and Follow actions if necessary */
+    retweetWorker() {
+
+        // Check if we have elements in the Result Array
+        if (this.searchResultsArr.length) {
+            // Pop the first element (by doing a shift() operation)
+            var searchItem = this.searchResultsArr[0];
+            this.searchResultsArr.shift();
+
+            // Retweet
+            console.log('[Retweeting Tweet #]', searchItem.id);
+            API.retweet(searchItem.id_str)
+                .then(() => {
+
+                    // On success, try to Favorite/Like and Follow
+                    if (searchItem.text.toLowerCase().indexOf('fav') > -1 || searchItem.text.toLowerCase().indexOf('like') > -1) {
+                        API.favorite(searchItem.id_str);
+                        console.log('[Marking as Favorite tweet #]', searchItem.id);
+                    }
+                    if (searchItem.text.toLowerCase().indexOf('follow') > -1) {
+                        API.follow(searchItem.user.id_str);
+                        console.log('[Following user]', searchItem.user.screen_name);
+                    }
+
+                    // Then, re-queue the RT Worker
+                    setTimeout(() => this.retweetWorker(), config.RETWEET_TIMEOUT);
+                })
+                .catch(() => {
+                    console.error('[Error] RT Failed for', searchItem.id, '. Likely has already been retweeted. Adding to blacklist.');
+
+                    // If the RT fails, blacklist it
+                    this.badTweetIds.push(searchItem.id);
+
+                    // Then, re-start the RT Worker
+                    setTimeout(() => this.retweetWorker(), config.RETWEET_TIMEOUT);
+                });
+
+        }
+
+        // No search results left in array
+        else {
+            if (this.limitLockout) {
+                // we must schedule this to rerun, or else the program will exit when a lockout occurs
+                setTimeout(() => this.retweetWorker(), config.RATE_SEARCH_TIMEOUT);
+                return;
+            }
+
+            console.log('No more results. Will search and analyze again in ', config.RATE_SEARCH_TIMEOUT / 1000 + ' seconds.');
 
             // go fetch new results
-            search();
-
-            setTimeout(function () {
-                retweetWorker();
-            }, RATE_SEARCH_TIMEOUT);
+            this.search();
+            setTimeout(() => this.retweetWorker(), config.RATE_SEARCH_TIMEOUT);
         }
-    };
+    }
+}
 
-    var sleepFor = function (sleepDuration) {
-        var now = new Date().getTime();
-        while (new Date().getTime() < now + sleepDuration) {
-            /* do nothing */
-        }
-    };
-
-
-    // Initializing function, begins the program.
-    // First, gets the blocked users
-    API.getBlockedUsers(function (blockedList) {
-
-        blockedUsers = blockedList;
-
-        // Start searching (the Search is in itself a worker, as the callback continues to fetch data)
-        search();
-
-        // Start the Retweet worker after short grace period for search results to come in
-        setTimeout(function () {
-            retweetWorker();
-        }, 8000);
-    });
-}());
+// Start the bot
+new ContestJSBot().start();
