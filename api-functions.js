@@ -53,7 +53,7 @@ const API = {
 
                 if (result && result.statuses) {
                     result.statuses.forEach(item => allItems.push(item));
-                    console.log('So far we have a total of:', allItems.length);
+                    console.log('[Search] So far we have', allItems.length, 'items');
 
                     // If we have the next_results, search again for the rest (sort of a pagination)
                     const nextRes = result.search_metadata.next_results;
