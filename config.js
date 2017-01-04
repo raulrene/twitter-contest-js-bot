@@ -9,7 +9,7 @@ const config = {
     },
 
     // Array of preferred accounts. If set, it only filters tweets from these accounts. Example: ['user1', 'user2']
-    preferred_accounts: [],
+    PREFERRED_ACCOUNTS: [],
 
     SEARCH_QUERIES: [
         'retweet to win',
