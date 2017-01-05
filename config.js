@@ -19,6 +19,9 @@ const config = {
     // Appended at the end of search queries to filter out some data
     SEARCH_QUERY_FILTERS: ' -vote -filter:retweets',
 
+    // Filter out tweets containing any phrases you want - just add them as strings in the array
+    POST_SEARCH_FILTERS: [],
+
     // Allow searching by location. A Valid geocode has the form "lat long radius_in_miles"
     // Example: '37.781157 -122.398720 1mi'
     SEARCH_BY_GEOCODE: '',

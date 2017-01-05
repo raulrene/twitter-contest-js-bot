@@ -64,38 +64,53 @@ class ContestJSBot {
         doSearch(0);
     }
 
-    /** The Callback function for the Search API */
+    /**
+     * The Callback function for the Search API.
+     * Filters bad tweets and constructs the array of tweets that we want to pass further to the worker.
+     */
     searchCallback(tweets) {
 
         // Iterate through tweets returned by the Search
-        tweets.forEach(searchItem => {
+        tweets.forEach(tweet => {
 
             // Lots of checks to filter out bad tweets, other bots and contests that are likely not legitimate :
             // If it's not already a retweet
-            if (searchItem.retweeted_status || searchItem.quoted_status_id) return;
+            if (tweet.retweeted_status || tweet.quoted_status_id) return;
 
             // It's not an ignored tweet
-            if (this.badTweetIds.indexOf(searchItem.id) > -1) return;
+            if (this.badTweetIds.indexOf(tweet.id) > -1) return;
 
-            // has enough retweets on the tweet for us to retweet it too (helps prove legitimacy)
-            if (searchItem.retweet_count < config.MIN_RETWEETS_NEEDED) return;
+            // Has enough retweets on the tweet for us to retweet it too (helps prove legitimacy)
+            if (tweet.retweet_count < config.MIN_RETWEETS_NEEDED) return;
 
-            // user is not on our blocked list
-            if (this.blockedUsers.indexOf(searchItem.user.id) > -1) return;
+            // User is not on our blocked list
+            if (this.blockedUsers.indexOf(tweet.user.id) > -1) return;
+
+            // It doesn't contain phrases that we don't want
+            if (config.POST_SEARCH_FILTERS.length) {
+                let containsBlockedPhrases = false;
+                config.POST_SEARCH_FILTERS.forEach(phrase => {
+                    if (tweet.text.indexOf(phrase) > -1) {
+                        containsBlockedPhrases = true;
+                        return false;
+                    }
+                });
+                if (containsBlockedPhrases) return;
+            }
 
             // We ignore users with high amounts of tweets (likely bots)
-            if (config.MAX_USER_TWEETS && searchItem.user.statuses_count >= config.MAX_USER_TWEETS) {
+            if (config.MAX_USER_TWEETS && tweet.user.statuses_count >= config.MAX_USER_TWEETS) {
                 // may be a spam bot, do we want to block them?
                 if (config.MAX_USER_TWEETS_BLOCK) {
-                    this.blockedUsers.push(searchItem.user.id);
-                    API.blockUser(searchItem.user.id)
-                        .then(() => console.log('Blocked possible bot user' + searchItem.user.id));
+                    this.blockedUsers.push(tweet.user.id);
+                    API.blockUser(tweet.user.id)
+                        .then(() => console.log('Blocked possible bot user' + tweet.user.id));
                 }
                 return;
             }
 
             // Save the search item in the Search Results array
-            this.searchResultsArr.push(searchItem);
+            this.searchResultsArr.push(tweet);
         });
     }
 
