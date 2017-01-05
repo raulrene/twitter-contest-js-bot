@@ -1,13 +1,7 @@
 const request = require('request-promise');
 const oauth = require('./config').auth;
-let allItems = [];
 const rootUrl = 'https://api.twitter.com/1.1';
-
-/**
- * Default callback
- * @param response {String} String representation of the response object
- */
-
+let allItems = [];
 
 /* API methods */
 const API = {
@@ -18,12 +12,13 @@ const API = {
      * - text (Required) : String
      * - count (optional) : Number
      * - result_type (optional) : String
+     * - geocode (optional) : String (lat long radius_in_miles)
      * - since_id (optional) : Number - start search from this ID
      * - max_id (optional) : Number - end search on this ID
      */
     search: (options) => {
         return new Promise((resolve, reject) => {
-            const {text, count = 100, result_type = 'popular', since_id = 0, max_id} = options;
+            const {text, count = 100, result_type = 'popular', since_id = 0, max_id, geocode} = options;
 
             let params =
                     `?q=${encodeURIComponent(options.text)}` +
@@ -33,6 +28,9 @@ const API = {
 
             if (max_id) {
                 params += `&max_id=${max_id}`;
+            }
+            if (geocode) {
+                params += `&geocode=${geocode}`;
             }
 
             allItems = [];

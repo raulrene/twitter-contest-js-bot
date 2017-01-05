@@ -8,9 +8,7 @@ const config = {
         token_secret: ''
     },
 
-    // Array of preferred accounts. If set, it only filters tweets from these accounts. Example: ['user1', 'user2']
-    PREFERRED_ACCOUNTS: [],
-
+    // The searches the bot will do
     SEARCH_QUERIES: [
         'retweet to win',
         'RT to win',
@@ -20,6 +18,10 @@ const config = {
 
     // Appended at the end of search queries to filter out some data
     SEARCH_QUERY_FILTERS: ' -vote -filter:retweets',
+
+    // Allow searching by location. A Valid geocode has the form "lat long radius_in_miles"
+    // Example: '37.781157 -122.398720 1mi'
+    SEARCH_BY_GEOCODE: '',
 
     // 'Specifies what type of search results you would prefer to receive. The current default is “mixed.” Valid values include:'
     // Default: 'recent'   (return only the most recent results in the response)
@@ -54,7 +56,10 @@ const config = {
     RETWEET_TIMEOUT: 1000 * 15,
 
     // 30 seconds for Search Timeout
-    RATE_SEARCH_TIMEOUT: 1000 * 30
+    RATE_SEARCH_TIMEOUT: 1000 * 30,
+
+    // Array of preferred accounts. If set, it only filters tweets from these accounts. Example: ['user1', 'user2']
+    PREFERRED_ACCOUNTS: []
 };
 
 module.exports = config;

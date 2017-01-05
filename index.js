@@ -34,6 +34,8 @@ class ContestJSBot {
         if (this.limitLockout) return;
 
         const since_id = this.last_tweet_id;
+        const result_type = config.RESULT_TYPE;
+        const geocode = config.SEARCH_BY_GEOCODE;
         console.log('[Search] Searching for tweets...');
 
         let doSearch = (index) => {
@@ -45,7 +47,7 @@ class ContestJSBot {
                 text += ` from:${config.PREFERRED_ACCOUNTS.join(' OR from:')}`;
             }
 
-            API.search({text, result_type: config.RESULT_TYPE, since_id})
+            API.search({text, result_type, since_id, geocode})
                 .then(res => {
                     // Call the search callback to process the data
                     this.searchCallback(res);
