@@ -134,17 +134,24 @@ class ContestJSBot {
             console.log('[Retweeting Tweet #]', searchItem.id);
             API.retweet(searchItem.id_str)
                 .then(() => {
+                    const text = searchItem.text.toLowerCase();
 
                     // Check if we should Like (favorite) the Tweet
-                    if (searchItem.text.toLowerCase().indexOf('fav') > -1 || searchItem.text.toLowerCase().indexOf('like') > -1) {
-                        API.like(searchItem.id_str);
-                        console.log('[Liked tweet #]', searchItem.id);
+                    if (text.indexOf('fav') > -1 || text.indexOf('like') > -1) {
+                        API.like(searchItem.id_str).then(() =>
+                            console.log('[Liked tweet #]', searchItem.id));
                     }
 
                     // Check if we should Follow the user
-                    if (searchItem.text.toLowerCase().indexOf('follow') > -1) {
-                        API.follow(searchItem.user.id_str);
-                        console.log('[Following user]', searchItem.user.screen_name);
+                    if (text.indexOf('follow') > -1) {
+                        API.follow(searchItem.user.id_str).then(() =>
+                            console.log('[Followed user]', searchItem.user.screen_name));
+                    }
+
+                    // Check if we should Reply
+                    if (text.indexOf('reply') > -1) {
+                        API.replyToTweet(searchItem).then(() =>
+                            console.log('[Replied to Tweet #]', searchItem.id));
                     }
 
                     // Then, re-queue the RT Worker

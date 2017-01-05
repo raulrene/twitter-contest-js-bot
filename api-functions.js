@@ -168,6 +168,27 @@ const API = {
                 })
                 .catch((err) => reject(err))
         )
+    ,
+
+    /**
+     * Reply to a tweet
+     * (The Reply on Twitter is basically a Status Update containing @username, where username is author of the original tweet)
+     * @param tweet {Object} The full Tweet we want to reply to
+     */
+    replyToTweet: (tweet) =>
+        new Promise((resolve, reject) => {
+            try {
+                const text = encodeURIComponent(`@${tweet.user.screen_name} `);
+                request.post({
+                    url: `${rootUrl}/statuses/update.json?status=${text}&in_reply_to_status_id=${tweet.id}`,
+                    oauth
+                })
+                    .then(() => resolve())
+                    .catch(err => reject(err))
+            } catch (err) {
+                reject(err);
+            }
+        })
 
 };
 
