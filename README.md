@@ -12,8 +12,22 @@ This bot is written purely for educational purposes. I hold no liability for wha
  * Make sure you have NodeJS up and running
  * `git clone` the repository, or download the zip file and unzip it
  * `npm install` in the directory where you cloned the repository (this is needed for installing dependencies)
- * Edit the `config.js` file with your Twitter API Credentials
- * run `node index.js`
+
+## Usage
+* Edit the `config.js` file with your Twitter API Credentials
+* The configuration file also holds all configurations needed for the bot:
+    * __SEARCH_QUERIES__ - the searches the bot will do
+    * __SEARCH\_QUERY_FILTERS__ - filters out data (each filter must be preceded by a "-")  
+    * __SEARCH\_BY_GEOCODE__ - allows searching by location given a latitude, longitude and radius
+    * __RESULT_TYPE__ - recent, popular or mixed
+    * __MIN\_RETWEETS_NEEDED__ - minimum amount of retweets a tweet needs before we retweet it (significantly reduces the amount of fake contests)
+    * __MAX\_USER_TWEETS__ - maximum amount of tweets a user can have before we do not retweet them
+    * __MAX\_USER\_TWEETS_BLOCK__ - block the user you suspect of being fake because of the high number of tweets
+    * __RATE\_LIMIT\_EXCEEDED_TIMEOUT__ - timeout when the max Twitter API limit is exceeded
+    * __RETWEET_TIMEOUT__ - timeout between retweets
+    * __RATE\_SEARCH_TIMEOUT__ - timeout between searches
+    * __PREFERRED_ACCOUNTS__ - array of preferred accounts; if set, it only filters tweets from these accounts
+* To start, run `node index.js`
 
 ## Dependencies
 It makes use of [request-promise](https://github.com/request/request-promise) - a HTTP JS client
