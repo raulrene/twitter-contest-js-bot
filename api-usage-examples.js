@@ -5,7 +5,7 @@ let promises = [
 
     API.retweet('454674764486172673'),
 
-    API.favorite('454674764486172673'),
+    API.like('454674764486172673'),
 
     API.followByUsername('RaulLepsa'),
 

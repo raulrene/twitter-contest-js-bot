@@ -86,10 +86,10 @@ const API = {
     ,
 
     /**
-     * Favorite a tweet
+     * Like (aka favorite) a tweet
      * @param tweetId {String} identifier for the tweet
      */
-    favorite: (tweetId) =>
+    like: (tweetId) =>
         new Promise((resolve, reject) =>
             request.post({url: `${rootUrl}/favorites/create.json?id=${tweetId}`, oauth})
                 .then((res) => resolve(res))

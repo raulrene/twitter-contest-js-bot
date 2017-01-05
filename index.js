@@ -23,7 +23,7 @@ class ContestJSBot {
                 this.search();
 
                 // Start the Retweet worker after short grace period for search results to come in
-                setTimeout(() => this.retweetWorker(), config.RETWEET_TIMEOUT);
+                setTimeout(() => this.worker(), config.RETWEET_TIMEOUT);
             })
             .catch(err => console.error('Your credentials are not valid. Check the config.js file and ensure you supply the correct API keys.', err));
     }
@@ -118,8 +118,11 @@ class ContestJSBot {
     }
 
 
-    /** The Retweet worker - also performs Favorite and Follow actions if necessary */
-    retweetWorker() {
+    /**
+     * The worker starts by Retweeting a tweet.
+     * If it finds necessary it also likes (favorites) it and follows the user.
+     */
+    worker() {
 
         // Check if we have elements in the Result Array
         if (this.searchResultsArr.length) {
@@ -132,18 +135,20 @@ class ContestJSBot {
             API.retweet(searchItem.id_str)
                 .then(() => {
 
-                    // On success, try to Favorite/Like and Follow
+                    // Check if we should Like (favorite) the Tweet
                     if (searchItem.text.toLowerCase().indexOf('fav') > -1 || searchItem.text.toLowerCase().indexOf('like') > -1) {
-                        API.favorite(searchItem.id_str);
-                        console.log('[Marking as Favorite tweet #]', searchItem.id);
+                        API.like(searchItem.id_str);
+                        console.log('[Liked tweet #]', searchItem.id);
                     }
+
+                    // Check if we should Follow the user
                     if (searchItem.text.toLowerCase().indexOf('follow') > -1) {
                         API.follow(searchItem.user.id_str);
                         console.log('[Following user]', searchItem.user.screen_name);
                     }
 
                     // Then, re-queue the RT Worker
-                    setTimeout(() => this.retweetWorker(), config.RETWEET_TIMEOUT);
+                    setTimeout(() => this.worker(), config.RETWEET_TIMEOUT);
                 })
                 .catch(() => {
                     console.error('[Error] RT Failed for', searchItem.id, '. Likely has already been retweeted. Adding to blacklist.');
@@ -152,7 +157,7 @@ class ContestJSBot {
                     this.badTweetIds.push(searchItem.id);
 
                     // Then, re-start the RT Worker
-                    setTimeout(() => this.retweetWorker(), config.RETWEET_TIMEOUT);
+                    setTimeout(() => this.worker(), config.RETWEET_TIMEOUT);
                 });
 
         }
@@ -161,7 +166,7 @@ class ContestJSBot {
         else {
             if (this.limitLockout) {
                 // we must schedule this to rerun, or else the program will exit when a lockout occurs
-                setTimeout(() => this.retweetWorker(), config.RATE_SEARCH_TIMEOUT);
+                setTimeout(() => this.worker(), config.RATE_SEARCH_TIMEOUT);
                 return;
             }
 
@@ -169,7 +174,7 @@ class ContestJSBot {
 
             // go fetch new results
             this.search();
-            setTimeout(() => this.retweetWorker(), config.RATE_SEARCH_TIMEOUT);
+            setTimeout(() => this.worker(), config.RATE_SEARCH_TIMEOUT);
         }
     }
 }

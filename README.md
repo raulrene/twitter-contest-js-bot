@@ -1,6 +1,6 @@
 # Twitter contest JS bot
 
-A Javascript bot that searches for tweets about contests and Retweets them. If necessary, it also Favorites the tweet or Follows the user. It ignores tweets from blocked users.
+A Javascript bot that searches for tweets about contests and Retweets them. If necessary, it also Likes (Favorites) the tweet or Follows the user. It ignores tweets from blocked users.
 
 Inspired by http://www.hscott.net/twitter-contest-winning-as-a-service/
 
