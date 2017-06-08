@@ -55,7 +55,7 @@ class ContestJSBot {
                     if (config.SEARCH_QUERIES[index + 1]) {
                         // Sleep between searches so we do not trigger rate limit lockout
                         console.log(`[Search] Sleeping for ${config.RATE_SEARCH_TIMEOUT / 1000} seconds between searches so we don't trigger rate limit`);
-                        setTimeout(() => doSearch(index++), config.RATE_SEARCH_TIMEOUT);
+                        setTimeout(() => doSearch(++index), config.RATE_SEARCH_TIMEOUT);
                     }
                 })
                 .catch(err => this.errorHandler(err));
