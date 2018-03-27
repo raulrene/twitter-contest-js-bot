@@ -30,7 +30,7 @@ const API = {
                 params += `&max_id=${max_id}`;
             }
             if (geocode) {
-                params += `&geocode=${geocode}`;
+                params += `&geocode=${encodeURIComponent(geocode)}`;
             }
 
             allItems = [];
